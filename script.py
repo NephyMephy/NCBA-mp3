@@ -5,63 +5,49 @@ import re
 import mimetypes
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from bs4 import BeautifulSoup
 from urllib.parse import unquote
 import time
 
 # --- Link Generation Functions ---
-def generate_links(html_content, judge_left="Judge 1", judge_right="Judge 2", 
+def generate_links(csv_data, judge_left="Judge 1", judge_right="Judge 2", 
                   txt_output="original_links.txt", csv_output="links_data.csv", 
                   no_sub_output="no_submissions.txt"):
     start_time = time.time()
     
-    try:
-        soup = BeautifulSoup(html_content, 'html.parser')
-        rows = soup.find('table', class_='waffle').find('tbody').find_all('tr')
-    except AttributeError as e:
-        print(f"Error parsing HTML: {str(e)}")
-        return [], [], [], []
-
-    data_rows = rows[4:]
     left_links = {}
     right_links = {}
-    csv_data = []
+    output_csv_data = []
     no_submissions = []
     
-    for row in data_rows:
-        try:
-            cells = row.find_all('td')
-            if len(cells) < 22:
-                continue
-                
-            if cells[0].text.strip():
-                result = process_schedule(cells[:11], cells[9:11], judge_left)
-                if isinstance(result, tuple) and len(result) == 6:
-                    number, student, link, equipment, classification, judge = result
-                    if link.startswith("http"):
-                        if equipment not in left_links:
-                            left_links[equipment] = []
-                        left_links[equipment].append((student, link))
-                        csv_data.append((judge, number, equipment, student, classification, link))
-                    elif student.strip():
-                        no_submissions.append((judge, number, equipment, student, classification, link))
-                    
-            if cells[12].text.strip():
-                result = process_schedule(cells[12:23], cells[21:23], judge_right)
-                if isinstance(result, tuple) and len(result) == 6:
-                    number, student, link, equipment, classification, judge = result
-                    if link.startswith("http"):
-                        if equipment not in right_links:
-                            right_links[equipment] = []
-                        right_links[equipment].append((student, link))
-                        csv_data.append((judge, number, equipment, student, classification, link))
-                    elif student.strip():
-                        no_submissions.append((judge, number, equipment, student, classification, link))
-                    
-        except Exception as e:
-            print(f"Error processing row: {str(e)}")
-            continue
+    # Skip header rows and process data
+    for row in csv_data[4:]:  # Skip first 4 header rows
+        # Left side (Mace)
+        if len(row) >= 12 and row[0].strip():  # Check if number exists
+            result = process_schedule(row[:12], judge_left)
+            if isinstance(result, tuple) and len(result) == 6:
+                number, student, link, equipment, classification, judge = result
+                if link.startswith("http"):
+                    if equipment not in left_links:
+                        left_links[equipment] = []
+                    left_links[equipment].append((student, link))
+                    output_csv_data.append((judge, number, equipment, student, classification, link))
+                elif student.strip():
+                    no_submissions.append((judge, number, equipment, student, classification, link))
+        
+        # Right side (Military/Conducting)
+        if len(row) >= 24 and row[13].strip():  # Check if number exists
+            result = process_schedule(row[13:], judge_right)
+            if isinstance(result, tuple) and len(result) == 6:
+                number, student, link, equipment, classification, judge = result
+                if link.startswith("http"):
+                    if equipment not in right_links:
+                        right_links[equipment] = []
+                    right_links[equipment].append((student, link))
+                    output_csv_data.append((judge, number, equipment, student, classification, link))
+                elif student.strip():
+                    no_submissions.append((judge, number, equipment, student, classification, link))
     
+    # Write original_links.txt
     with open(txt_output, 'w', encoding='utf-8') as f:
         f.write(f"=== {judge_left} ===\n\n")
         for equip in sorted(left_links.keys()):
@@ -80,14 +66,16 @@ def generate_links(html_content, judge_left="Judge 1", judge_right="Judge 2",
                 f.write("\n")
     print(f"Generated original links saved to {txt_output}")
     
-    csv_data.sort(key=lambda x: (x[0], int(x[1]) if x[1].isdigit() else float('inf')))
+    # Write links_data.csv
+    output_csv_data.sort(key=lambda x: (x[0], int(x[1]) if x[1].isdigit() else float('inf')))
     with open(csv_output, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['Judge', 'Number', 'Equipment', 'Student', 'Classification', 'Music Link'])
-        for row in csv_data:
+        for row in output_csv_data:
             writer.writerow(row)
     print(f"Generated CSV data saved to {csv_output}")
     
+    # Write no_submissions.txt
     with open(no_sub_output, 'w', encoding='utf-8') as f:
         if no_submissions:
             f.write("Students with No Submissions:\n\n")
@@ -99,28 +87,28 @@ def generate_links(html_content, judge_left="Judge 1", judge_right="Judge 2",
     
     end_time = time.time()
     print(f"Link generation completed in {end_time - start_time:.2f} seconds")
-    return csv_data
+    return output_csv_data
 
-def process_schedule(cells, link_cells, judge):
+def process_schedule(row, judge):
     try:
-        number = cells[0].text.strip()
-        equipment = cells[1].text.strip()
-        classification = cells[2].text.strip()
-        student = cells[4].text.strip()
+        number = row[0].strip()  # #
+        equipment = row[1].strip()  # Equipment
+        classification = row[2].strip()  # Classification
+        student = row[4].strip()  # Student
+        link_text = row[11].strip()  # Music Link
         
-        audio_link_cell = link_cells[1]
-        link_text = audio_link_cell.text.strip()
-        
+        if not number or not student:  # Skip empty rows
+            return None
+            
         if link_text.lower() == "not submitted":
             return (number, student, "No valid link found", equipment, classification, judge)
         
-        audio_link = audio_link_cell.find('a')
-        if not audio_link or 'drive.google.com' not in audio_link['href']:
+        if not link_text or 'drive.google.com' not in link_text:
             return (number, student, "No valid link found", equipment, classification, judge)
             
-        original_url = extract_original_url(audio_link['href'])
+        original_url = extract_original_url(link_text)
         return (number, student, original_url, equipment, classification, judge)
-    except Exception:
+    except Exception as e:
         return (number, student, "Processing error", equipment, classification, judge)
 
 def extract_original_url(redirect_url):
@@ -220,25 +208,26 @@ def download_files(csv_data, judge_left, judge_right, max_workers=12):
 # --- Main Execution ---
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python combined_script.py \"Judge Name 1\" \"Judge Name 2\"")
+        print("Usage: python script.py \"Judge Name 1\" \"Judge Name 2\"")
         return
     
     judge_left = sys.argv[1]
     judge_right = sys.argv[2]
     
     try:
-        with open('document.html', 'r', encoding='utf-8') as f:
-            html_content = f.read()
+        with open('schedule.csv', 'r', encoding='utf-8') as f:
+            csv_reader = csv.reader(f)
+            csv_data = list(csv_reader)
     except FileNotFoundError:
-        print("Please save the HTML content as 'document.html' in the same directory")
+        print("Please save the CSV content as 'schedule.csv' in the same directory")
         return
     
     # Step 1: Generate links and CSV data
-    csv_data = generate_links(html_content, judge_left, judge_right)
+    csv_output_data = generate_links(csv_data, judge_left, judge_right)
     
     # Step 2: Download files using the generated data
-    if csv_data:
-        download_files(csv_data, judge_left, judge_right)
+    if csv_output_data:
+        download_files(csv_output_data, judge_left, judge_right)
 
 if __name__ == "__main__":
     main()
