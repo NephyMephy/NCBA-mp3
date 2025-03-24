@@ -1,6 +1,6 @@
 # NCBA-mp3
 
-NCBA-mp3 downloads drum major competition audio files with a renaming function from a Google Sheet saved as a CSV, featuring a simple graphical user interface (GUI) for ease of use.
+NCBA-mp3 downloads drum major competition audio files with a renaming function a CSV formatted by NCBA, featuring a simple graphical user interface (GUI) for ease of use.
 
 ## Prerequisites
 - Python >= 3.12.9 (Older versions may work, but this is recommended)
@@ -23,10 +23,14 @@ These scripts automatically install Python and Git if missing, clone the reposit
 
 #### macOS/Linux
 1. **Download `MacOSLinux-run.sh`**:
-   - Download from the repository releases or clone the repo manually.
+   - Download from the repository releases or clone the repo manually. Save to your Downloads folder
 2. **Make it Executable**:
    ```bash
+   cd Downloads/
    chmod +x MacOSLinux-run.sh
+3. **Run the Bash Script**
+   ```bash
+   sudo bash ./MacOSLinux-run.sh
 
 ### Option 2: Manual Installation
 1. Clone this repository:
