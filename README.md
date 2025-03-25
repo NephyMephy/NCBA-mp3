@@ -8,7 +8,7 @@ NCBA-mp3 downloads drum major competition audio files with a renaming function a
 
 ## Installation and Running
 
-IMPORTANT: Rename the CSV to `schedule.csv` or else the script will not run.
+IMPORTANT: Rename the downloaded CSV to `schedule.csv` or else the script will not run.
 
 ### Option 1: Using Setup Scripts (Recommended)
 These scripts automatically install Python and Git if missing, clone the repository, and run the script.
