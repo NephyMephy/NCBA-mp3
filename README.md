@@ -8,8 +8,6 @@ NCBA-mp3 downloads drum major competition audio files with a renaming function a
 
 ## Installation and Running
 
-IMPORTANT: Rename the downloaded CSV to `schedule.csv` or else the script will not run.
-
 ### Option 1: Using Setup Scripts (Recommended)
 These scripts automatically install Python and Git if missing, clone the repository, and run the script.
 Note: Due to how the csv is setup from NCBA, Judge Names need to be manually inputted. An alternative name will still work with full functionality.
@@ -20,9 +18,7 @@ Note: Due to how the csv is setup from NCBA, Judge Names need to be manually inp
 2. **Run the Script**:
    - On `Windows-Run.bat`, Right-click and Select 'Run as Admisistrator' or run it in Command Prompt (preferably as Administrator for automatic installations).
    - If prompted, allow the script to install Python 3.12 and Git using `winget`.
-3. **Prepare the CSV**:
-   - Place `schedule.csv` (exported from your Google Sheet) in the `NCBA_mp3_downloader` directory created by the script.
-4. **Follow GUI Instructions**
+3. **Follow GUI Instructions**
 
 #### macOS/Linux
 1. **Download `MacOSLinux-run.sh`**:

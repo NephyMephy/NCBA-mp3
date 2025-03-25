@@ -215,10 +215,21 @@ def select_output_dir(output_label, console):
         console.insert(tk.END, f"Output directory set to: {folder}\n")
     return folder
 
-def start_processing(judge1_entry, judge2_entry, output_label, console):
+def select_csv_file(csv_label, console):
+    csv_file = filedialog.askopenfilename(
+        title="Select schedule.csv",
+        filetypes=(("CSV files", "*.csv"), ("All files", "*.*"))
+    )
+    if csv_file:
+        csv_label.config(text=f"CSV: {csv_file}")
+        console.insert(tk.END, f"Selected CSV file: {csv_file}\n")
+    return csv_file
+
+def start_processing(judge1_entry, judge2_entry, output_label, csv_label, console):
     judge_left = judge1_entry.get().strip()
     judge_right = judge2_entry.get().strip()
     output_dir = output_label.cget("text").replace("Output: ", "")
+    csv_file = csv_label.cget("text").replace("CSV: ", "")
     
     if not judge_left or not judge_right:
         console.insert(tk.END, "Please enter both judge names!\n")
@@ -226,16 +237,21 @@ def start_processing(judge1_entry, judge2_entry, output_label, console):
     if not output_dir or output_dir == "Output: Not selected":
         console.insert(tk.END, "Please select an output directory!\n")
         return
+    if not csv_file or csv_file == "CSV: Not selected":
+        console.insert(tk.END, "Please select a CSV file!\n")
+        return
     
     console.insert(tk.END, f"Starting process for Judge 1: {judge_left}, Judge 2: {judge_right}\n")
     console.insert(tk.END, f"Output directory: {output_dir}\n")
+    console.insert(tk.END, f"Using CSV file: {csv_file}\n")
     
+    # Read the selected CSV file
     try:
-        with open('schedule.csv', 'r', encoding='utf-8') as f:
+        with open(csv_file, 'r', encoding='utf-8') as f:
             csv_reader = csv.reader(f)
             csv_data = list(csv_reader)
-    except FileNotFoundError:
-        console.insert(tk.END, "Error: Please save the CSV content as 'schedule.csv' in the same directory\n")
+    except Exception as e:
+        console.insert(tk.END, f"Error reading CSV file: {str(e)}\n")
         return
     
     csv_output_data = generate_links(csv_data, judge_left, judge_right, output_dir, console=console)
@@ -267,11 +283,17 @@ def create_ui():
     ttk.Button(input_frame, text="Select", 
               command=lambda: select_output_dir(output_label, console)).grid(row=2, column=2, padx=5, pady=5)
     
+    ttk.Label(input_frame, text="CSV File:").grid(row=3, column=0, padx=5, pady=5)
+    csv_label = ttk.Label(input_frame, text="CSV: Not selected")
+    csv_label.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+    ttk.Button(input_frame, text="Select", 
+              command=lambda: select_csv_file(csv_label, console)).grid(row=3, column=2, padx=5, pady=5)
+    
     # Start button
     start_button = ttk.Button(input_frame, text="Start",
                             command=lambda: Thread(target=start_processing, 
-                                                 args=(judge1_entry, judge2_entry, output_label, console)).start())
-    start_button.grid(row=3, column=0, columnspan=3, pady=10)
+                                                 args=(judge1_entry, judge2_entry, output_label, csv_label, console)).start())
+    start_button.grid(row=4, column=0, columnspan=3, pady=10)
     
     # Console output
     console = scrolledtext.ScrolledText(root, width=70, height=20)
